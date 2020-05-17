@@ -1,5 +1,4 @@
 import Foundation
-import Cocoa
 
 extension UserDefaults {
 	enum Key: String {
@@ -7,7 +6,7 @@ extension UserDefaults {
 	}
 }
 
-final class BookmarkManager {
+struct BookmarkManager {
 	static let shared = BookmarkManager()
 
 	func save(key: UserDefaults.Key, url: URL) {

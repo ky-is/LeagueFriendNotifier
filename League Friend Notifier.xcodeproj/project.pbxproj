@@ -14,6 +14,8 @@
 		24267F00246F80420033D93E /* StatusBarItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24267EFF246F80420033D93E /* StatusBarItem.swift */; };
 		24267F03246F9A9A0033D93E /* ClientBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24267F02246F9A9A0033D93E /* ClientBridge.swift */; };
 		2491CC322470709200BE100F /* BookmarkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2491CC312470709200BE100F /* BookmarkManager.swift */; };
+		2491CC342470BB3200BE100F /* FriendManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2491CC332470BB3200BE100F /* FriendManager.swift */; };
+		2491CC362470DF7B00BE100F /* LockfileObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2491CC352470DF7B00BE100F /* LockfileObserver.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,6 +29,8 @@
 		24267EFF246F80420033D93E /* StatusBarItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBarItem.swift; sourceTree = "<group>"; };
 		24267F02246F9A9A0033D93E /* ClientBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientBridge.swift; sourceTree = "<group>"; };
 		2491CC312470709200BE100F /* BookmarkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarkManager.swift; sourceTree = "<group>"; };
+		2491CC332470BB3200BE100F /* FriendManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendManager.swift; sourceTree = "<group>"; };
+		2491CC352470DF7B00BE100F /* LockfileObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockfileObserver.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -84,6 +88,8 @@
 			children = (
 				24267F02246F9A9A0033D93E /* ClientBridge.swift */,
 				2491CC312470709200BE100F /* BookmarkManager.swift */,
+				2491CC332470BB3200BE100F /* FriendManager.swift */,
+				2491CC352470DF7B00BE100F /* LockfileObserver.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -159,8 +165,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2491CC362470DF7B00BE100F /* LockfileObserver.swift in Sources */,
 				24267F00246F80420033D93E /* StatusBarItem.swift in Sources */,
 				2491CC322470709200BE100F /* BookmarkManager.swift in Sources */,
+				2491CC342470BB3200BE100F /* FriendManager.swift in Sources */,
 				24267F03246F9A9A0033D93E /* ClientBridge.swift in Sources */,
 				24267EED246F7E370033D93E /* AppDelegate.swift in Sources */,
 			);

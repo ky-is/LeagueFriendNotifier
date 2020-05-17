@@ -7,62 +7,124 @@ enum HTTPMethod: String {
 final class ClientBridge: NSObject {
 	static let shared = ClientBridge()
 
+	private var observer: LockfileObserver?
+	private var lockfileDirectory: URL?
 	private var session: URLSession!
-	private var websocket: URLSessionWebSocketTask?
 	private var baseURL: URL!
 	private var authorization: String!
+
+	private var wsURL: URL!
+	private var webSocketTask: URLSessionWebSocketTask?
+	private var retryWebsocketWork: DispatchWorkItem?
 
 	override init() {
 		super.init()
 		session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
 	}
 
-	func readLockfile(_ url: URL) {
-		do {
-			let contents = try String(contentsOf: url)
-			let split = contents.split(separator: ":")
-//			let name = String(split[0])
-//			let pid = Int(split[1]) ?? 0
-			guard let port = Int(split[2]) else {
-				return print("Invalid port", split[2], contents)
-			}
-			let token = String(split[3])
-			authorization = "riot:\(token)".data(using: .utf8)!.base64EncodedString()
-			let httpProtocol = String(split[4])
-			baseURL = URL(string: "\(httpProtocol)://127.0.0.1:\(port)")
+	func observeLockfile(in url: URL) {
+		if let observer = observer {
+			NSFileCoordinator.removeFilePresenter(observer)
+		}
+		lockfileDirectory = url
+		observer = LockfileObserver(url: url)
+		NSFileCoordinator.addFilePresenter(observer!)
+	}
 
-			let wsURL = URL(string: "wss://127.0.0.1:\(port)")!
-			let request = createRequest(for: wsURL)
-			session.webSocketTask(with: request).resume()
+	func readLockfile() {
+		guard let url = lockfileDirectory else {
+			return
+		}
+		let contents: String
+		do {
+			contents = try String(contentsOf: url.appendingPathComponent("lockfile"))
 		} catch {
-			print("Unable to read lockfile", error.localizedDescription)
+			return print(#function, error.localizedDescription)
+		}
+		let split = contents.split(separator: ":")
+		//		let name = String(split[0])
+		//		let pid = Int(split[1]) ?? 0
+		guard let port = Int(split[2]) else {
+			return print("Invalid port", contents)
+		}
+		let token = String(split[3])
+		authorization = "riot:\(token)".data(using: .utf8)!.base64EncodedString()
+		let httpProtocol = String(split[4])
+		baseURL = URL(string: "\(httpProtocol)://127.0.0.1:\(port)")
+		wsURL = URL(string: "wss://127.0.0.1:\(port)")!
+		createWebSocket()
+	}
+
+	func close() {
+		print("WS CLOSED")
+		retryWebsocketWork?.cancel()
+		retryWebsocketWork = nil
+		webSocketTask?.cancel(with: .goingAway, reason: nil)
+		webSocketTask = nil
+	}
+
+	private func updateFriendsList() {
+		send("/lol-chat/v1/friends") { response in
+			if let response = response as? [[String: Any]] {
+				FriendManager.update(data: response)
+			}
 		}
 	}
 
+	private func respondToReadyCheck(_ data: [String: Any]) {
+		guard let response = data["playerResponse"] as? String, response != "none" else {
+			return
+		}
+		guard let timer = data["timer"] as? Int, timer < Int.random(in: 7...10) else {
+			return
+		}
+		send("/lol-matchmaking/v1/ready-check/accept", method: .post) { response in
+			print(response)
+		}
+	}
+
+	private func createWebSocket() {
+		webSocketTask?.cancel(with: .goingAway, reason: nil)
+		let request = createRequest(for: wsURL)
+		let task = session.webSocketTask(with: request)
+		task.resume()
+		webSocketTask = task
+	}
+
 	private func handleMessage(result: Result<URLSessionWebSocketTask.Message, Error>) {
-		websocket?.receive(completionHandler: handleMessage)
+		webSocketTask?.receive(completionHandler: handleMessage)
 		switch result {
 		case .success(let message):
+			let rawData: Data
 			switch message {
-			case .data(let data):
-				print("WS Data?", data)
+			case .data(let wsData):
+				rawData = wsData
 			case .string(let string):
-				guard !string.isEmpty else {
+				guard !string.isEmpty, let stringData = string.data(using: .utf8) else {
 					return
 				}
-				guard let data = try? JSONSerialization.jsonObject(with: string.data(using: .utf8)!, options: []) as? [Any] else {
-					return print("Unable to decode", string)
-				}
-				guard let contents = data[2] as? [String: Any], let uri = contents["uri"] as? String else {
-					return print("Invalid contents", data[2])
-				}
-				switch uri {
-				default:
-//					print(uri)
-					break
-				}
+				rawData = stringData
 			@unknown default:
 				print("Unknown message type")
+				return
+			}
+
+			guard let json = try? JSONSerialization.jsonObject(with: rawData, options: []) as? [Any] else {
+				return print("Unable to decode", rawData)
+			}
+			guard let contents = json[2] as? [String: Any], let uri = contents["uri"] as? String else {
+				return print("Invalid contents", json[2])
+			}
+			switch uri {
+			case "/lol-chat/v1/friend-counts":
+				updateFriendsList()
+			case "/lol-matchmaking/v1/ready-check":
+				if let data = contents["data"] as? [String: Any] {
+					respondToReadyCheck(data)
+				}
+			default:
+//				print(uri)
+				return
 			}
 		case .failure(let error):
 			print(error.localizedDescription)
@@ -78,10 +140,9 @@ final class ClientBridge: NSObject {
 	func send(_ name: String, method: HTTPMethod? = nil, callback: ((Any) -> Void)? = nil) {
 		var request = createRequest(for: baseURL.appendingPathComponent(name))
 		request.httpMethod = method?.rawValue
-		session.webSocketTask(with: request).resume()
 		let task = session.dataTask(with: request) { data, response, error in
 			if let error = error {
-				return print(error.localizedDescription)
+				return print(#function, error.localizedDescription)
 			}
 			guard let data = data else {
 				return
@@ -93,7 +154,7 @@ final class ClientBridge: NSObject {
 				let json = try JSONSerialization.jsonObject(with: data, options: [])
 				callback(json)
 			} catch {
-				print(error.localizedDescription)
+				print("JSON", error.localizedDescription)
 			}
 		}
 		task.resume()
@@ -106,18 +167,34 @@ extension ClientBridge: URLSessionDelegate {
 		let credential = trust != nil ? URLCredential(trust: trust!) : URLCredential()
 		completionHandler(.useCredential, credential)
 	}
+
+	func urlSession(_ session: URLSession, didBecomeInvalidWithError error: Error?) {
+		print("INVALID", error?.localizedDescription ?? "")
+	}
+
+	func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+		if task is URLSessionWebSocketTask {
+			close()
+			let work = DispatchWorkItem(block: createWebSocket)
+			DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(1), execute: work)
+			retryWebsocketWork = work
+		} else {
+			print(#function, error?.localizedDescription ?? "")
+		}
+	}
 }
 
 extension ClientBridge: URLSessionWebSocketDelegate {
 	func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didOpenWithProtocol protocol: String?) {
-		websocket = webSocketTask
+		print("WS OPEN")
 		webSocketTask.receive(completionHandler: handleMessage)
 		subscribe()
+		updateFriendsList()
 	}
 
 	private func subscribe() {
 		let message = try! JSONSerialization.data(withJSONObject: [5, "OnJsonApiEvent"], options: [])
-		websocket?.send(.data(message)) { error in
+		webSocketTask?.send(.data(message)) { error in
 			if let error = error {
 				print("Unable to subscribe for callbacks", error.localizedDescription)
 			}
@@ -125,8 +202,7 @@ extension ClientBridge: URLSessionWebSocketDelegate {
 	}
 
 	func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
-		print("CLOSED")
-		websocket = nil
-		//TODO wait for readLockfile
+		print("WS CLOSED")
+		close()
 	}
 }
