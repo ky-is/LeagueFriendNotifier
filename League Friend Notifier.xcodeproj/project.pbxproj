@@ -64,8 +64,8 @@
 		24267EEB246F7E370033D93E /* macOS */ = {
 			isa = PBXGroup;
 			children = (
-				24267EFF246F80420033D93E /* StatusBarItem.swift */,
 				24267EEC246F7E370033D93E /* AppDelegate.swift */,
+				24267EFF246F80420033D93E /* StatusBarItem.swift */,
 				24267EF0246F7E3A0033D93E /* Assets.xcassets */,
 				24267EF5246F7E3A0033D93E /* Main.storyboard */,
 				24267EF8246F7E3A0033D93E /* Info.plist */,

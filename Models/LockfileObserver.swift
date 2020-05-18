@@ -21,7 +21,7 @@ final class LockfileObserver: NSObject, NSFilePresenter {
 	private func updateLockfile(_ url: URL) {
 		let hasLockfile = FileManager.default.fileExists(atPath: url.path)
 		StatusBarItem.shared.update(connected: hasLockfile)
-		print(url.lastPathComponent, hasLockfile)
+//		print(url.lastPathComponent, hasLockfile)
 		if hasLockfile {
 			ClientBridge.shared.readLockfile()
 		} else {
