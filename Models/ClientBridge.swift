@@ -7,6 +7,8 @@ enum HTTPMethod: String {
 final class ClientBridge: NSObject {
 	static let shared = ClientBridge()
 
+	var inGame = false
+
 	private var observer: LockfileObserver?
 	private var lockfileDirectory: URL?
 	private var session: URLSession!
@@ -42,8 +44,8 @@ final class ClientBridge: NSObject {
 			return print(#function, error.localizedDescription)
 		}
 		let split = contents.split(separator: ":")
-		//		let name = String(split[0])
-		//		let pid = Int(split[1]) ?? 0
+//		let name = String(split[0])
+//		let pid = Int(split[1]) ?? 0
 		guard let port = Int(split[2]) else {
 			return print("Invalid port", contents)
 		}
@@ -80,6 +82,12 @@ final class ClientBridge: NSObject {
 		}
 		send("/lol-matchmaking/v1/ready-check/accept", method: .post) { response in
 			print(response)
+		}
+	}
+
+	private func updateAvailability(_ data: [String: Any]) {
+		if let availability = data["availability"] as? String {
+			inGame = availability == "dnd"
 		}
 	}
 
@@ -122,8 +130,12 @@ final class ClientBridge: NSObject {
 				if let data = contents["data"] as? [String: Any] {
 					respondToReadyCheck(data)
 				}
+			case "/lol-chat/v1/me":
+				if let data = contents["data"] as? [String: Any] {
+					updateAvailability(data)
+				}
 			default:
-//				print(uri)
+//				print(uri) //SAMPLE
 				return
 			}
 		case .failure(let error):
@@ -144,10 +156,7 @@ final class ClientBridge: NSObject {
 			if let error = error {
 				return print(#function, error.localizedDescription)
 			}
-			guard let data = data else {
-				return
-			}
-			guard let callback = callback else {
+			guard let data = data, let callback = callback else {
 				return
 			}
 			do {

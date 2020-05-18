@@ -77,7 +77,7 @@ final class Friend: Comparable {
 	}
 
 	func notifyIfNeeded() {
-		guard enableNotifications, !didNotify else {
+		guard !ClientBridge.shared.inGame, enableNotifications, !didNotify else {
 			return
 		}
 		guard product == "league_of_legends", !isOffline, !isBusy else {
@@ -95,7 +95,6 @@ final class Friend: Comparable {
 	}
 
 	func update(data: [String: Any]) {
-		self.name = data["name"] as! String
 		self.product = data["product"] as! String
 		self.status = data["availability"] as! String
 		notifyIfNeeded()
