@@ -89,6 +89,7 @@ final class Friend: Comparable {
 		notification.body = "Click to view in League of Legends."
 		notification.sound = nil
 		notification.categoryIdentifier = "online"
+		notification.threadIdentifier = "online"
 		let request = UNNotificationRequest(identifier: id.description, content: notification, trigger: nil)
 		UNUserNotificationCenter.current().add(request)
 		didNotify = true
